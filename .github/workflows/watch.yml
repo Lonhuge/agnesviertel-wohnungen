@@ -1,0 +1,61 @@
+name: Agnesviertel watcher
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"   # every 5 min (GitHub may space these out under load)
+  workflow_dispatch: {}       # lets you run it manually from the Actions tab
+
+concurrency:
+  group: agnes-watch
+  cancel-in-progress: false
+
+permissions:
+  contents: write             # allow committing seen_ids.json back to the repo
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install deps
+        run: pip install --quiet requests beautifulsoup4 lxml
+
+      - name: Check for new listings
+        id: watch
+        run: python watch_new.py
+
+      - name: Load email body
+        if: steps.watch.outputs.has_new == 'true'
+        run: |
+          {
+            echo "MAILBODY<<__EOF__"
+            cat new_listings.txt
+            echo "__EOF__"
+          } >> "$GITHUB_ENV"
+
+      - name: Email new listings
+        if: steps.watch.outputs.has_new == 'true'
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 465
+          secure: true
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          from: Agnesviertel Watcher <${{ secrets.MAIL_USERNAME }}>
+          to: fionadoerich@gmail.com
+          subject: "üè† ${{ steps.watch.outputs.count }} neue Agnesviertel-Wohnung(en)"
+          body: ${{ env.MAILBODY }}
+
+      - name: Persist seen state
+        run: |
+          git config user.name "agnes-watcher"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add seen_ids.json
+          git commit -m "watch: update seen listings [skip ci]" || echo "no changes to commit"
+          git push
