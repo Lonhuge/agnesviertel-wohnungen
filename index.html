@@ -335,20 +335,20 @@ render();
   var PLZ = {"50667": [50.938, 6.958], "50668": [50.949, 6.964], "50670": [50.951, 6.951], "50672": [50.943, 6.938], "50674": [50.93, 6.937], "50676": [50.928, 6.949], "50677": [50.921, 6.955], "50733": [50.968, 6.955], "50735": [50.973, 6.97], "50739": [50.983, 6.93], "50769": [51.045, 6.9], "50823": [50.951, 6.918], "50825": [50.955, 6.905], "50827": [50.962, 6.895], "50829": [50.965, 6.86], "50858": [50.93, 6.835], "50859": [50.945, 6.815], "50933": [50.938, 6.895], "50937": [50.917, 6.925], "50968": [50.908, 6.975], "50969": [50.905, 6.945], "50996": [50.878, 6.99], "50999": [50.865, 6.995], "51061": [51.0, 7.02], "51063": [50.968, 7.01], "51067": [50.985, 7.03], "51069": [51.02, 7.03], "51103": [50.94, 7.01], "51105": [50.918, 7.01], "51107": [50.93, 7.045], "51109": [50.95, 7.055], "51143": [50.875, 7.045], "51145": [50.855, 7.075], "51147": [50.868, 7.065], "51149": [50.885, 7.02]};
   var el = document.getElementById('immo-map');
   if(!el || !window.L || typeof DATA === 'undefined') return;
-  var map = L.map('immo-map', {scrollWheelZoom:false});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+  var map = window.L.map('immo-map', {scrollWheelZoom:false});
+  window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
     {maxZoom:18, attribution:'© OpenStreetMap-Mitwirkende'}).addTo(map);
   var pts=[], seen={};
   DATA.forEach(function(d){
-    var c = PLZ[d.plz]; if(!c) return;
-    var k = (seen[d.plz] = (seen[d.plz]||0)+1);
+    var plz = d.plz || (d.location && (String(d.location).match(/\b(\d{5})\b/)||[])[1]); var c = PLZ[plz]; if(!c) return;
+    var k = (seen[plz] = (seen[plz]||0)+1);
     var ang = k*2.3999, r = 0.0018*Math.sqrt(k);          // golden-angle spiral within the PLZ
     var lat = c[0]+r*Math.cos(ang), lon = c[1]+r*Math.sin(ang);
     var price = (d.price!=null) ? new Intl.NumberFormat('de-DE').format(d.price)+' \u20ac' : 'Preis a.A.';
     var t = (d.title||'').replace(/</g,'&lt;').slice(0,90);
-    var m = L.circleMarker([lat,lon], {radius:7, color:'#fff', weight:2,
+    var m = window.L.circleMarker([lat,lon], {radius:7, color:'#fff', weight:2,
               fillColor:'#C4122F', fillOpacity:0.9});
-    m.bindPopup('<b>'+price+'</b> \u00b7 '+(d.plz||'')+'<br>'+t+
+    m.bindPopup('<b>'+price+'</b> \u00b7 '+(plz||'')+'<br>'+t+
       '<br><a href="'+d.url+'" target="_blank" rel="noopener">Inserat \u00f6ffnen \u2197</a>');
     m.addTo(map); pts.push([lat,lon]);
   });
